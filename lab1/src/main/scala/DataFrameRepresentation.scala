@@ -86,8 +86,10 @@ object DataFrameRepresentation {
         .option("delimiter", "\t")
         .option("timestampFormat", "yyyyMMddHHmmSS")
         .schema(schema)
-        .load("C:\\Users\\matte\\Desktop\\TU Delft\\Quarter V\\Supercomputing for Big Data\\SBD-tudelft-master\\lab1\\data\\segment\\*.csv")
+        .load("./data/segment150/*.gkg.csv")
         .as[NewsArticle]
+
+    val t0 = System.currentTimeMillis()
 
     // remove rows whose AllNames attribute is null
     val ds_filtered = ds.filter(x => x.Allnames != null)
@@ -121,12 +123,18 @@ object DataFrameRepresentation {
     // sort in descending order based on the count, go from ((date, name), count) to (date, (name, count)) in order to have the desired shape for the list later
     // then take only the top 10 elements for each date
     val top10NamesPerDate = groupedNames.sort($"count(1)".desc)
-        .map{case ((date, name),count) => (date, (name, count))}.rdd
+        .map{case ((date, name),count) => (date, (name, count))}
         .groupByKey()
         .mapValues(x => x.toList.take(10))
 
+    top10NamesPerDate.collect()
+
+    val t1 = System.currentTimeMillis()
+
     // display the list of names
-    top10NamesPerDate.collect().foreach(println)
+    println("Elapsed time: " + (t1 - t0) + "ms")
+
+    top10NamesPerDate.foreach(println)
 
     spark.stop()
   }

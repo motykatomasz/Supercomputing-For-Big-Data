@@ -12,11 +12,13 @@ object RddBasedImplementation {
     val spark = SparkSession.builder.appName("Lab 1 RDD implementation").config("spark.master", "local").getOrCreate()
     val sc = spark.sparkContext
 
-    val rawRDD = sc.textFile("./data/segment/*.gkg.csv")
+    val rawRDD = sc.textFile("./data/segment150/*.gkg.csv")
+
+    val t0 = System.currentTimeMillis()
 
     val splittedColumns = rawRDD.map(_.split("\t",-1))
 
-    val filteredColumns = splittedColumns.map(row => (row(1), row(23).split(";")))
+    val filteredColumns = splittedColumns.filter(_.length == 27).map(row => (row(1).substring(0,8), row(23).split(";")))
 
     val splittedNamesColumn = filteredColumns.mapValues(names => names.map(_.split(",")))
 
@@ -26,13 +28,17 @@ object RddBasedImplementation {
       ((date, name), count)
     }
 
-    val dateFormat = new SimpleDateFormat("yyyyMMddHHmmss")
-
     val countedNamesByDate = preparedForCounting.reduceByKey(_+_).map{ case ((date: String, name: String), count: Int) =>
-      (dateFormat.parse(date), (name, count))
+      (date, (name, count))
     }.groupByKey()
 
     val sorted = countedNamesByDate.mapValues(l => l.toList.sortBy(_._2)(Ordering[Int].reverse).take(10))
+
+    sorted.collect()
+
+    val t1 = System.currentTimeMillis()
+
+    println("Elapsed time: " + (t1 - t0) + "ms")
 
     sorted.foreach(println)
 
