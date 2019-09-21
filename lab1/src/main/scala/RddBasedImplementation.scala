@@ -12,7 +12,7 @@ object RddBasedImplementation {
     val spark = SparkSession.builder.appName("Lab 1 RDD implementation").config("spark.master", "local").getOrCreate()
     val sc = spark.sparkContext
 
-    val rawRDD = sc.textFile("./data/segment150/*.gkg.csv")
+    val rawRDD = sc.textFile("./data/segment100/*.gkg.csv")
 
     val t0 = System.currentTimeMillis()
 
@@ -22,7 +22,7 @@ object RddBasedImplementation {
 
     val splittedNamesColumn = filteredColumns.mapValues(names => names.map(_.split(",")))
 
-    val addedOnesToNames = splittedNamesColumn.flatMapValues(a => a.filter(a => a(0) != "").map(a => (a(0), 1)))
+    val addedOnesToNames = splittedNamesColumn.flatMapValues(a => a.filter(a => (a(0) != "" && !a(0).contains("Category"))).map(a => (a(0), 1)))
 
     val preparedForCounting = addedOnesToNames.map{ case (date: String, (name: String, count: Int)) =>
       ((date, name), count)
@@ -39,8 +39,6 @@ object RddBasedImplementation {
     val t1 = System.currentTimeMillis()
 
     println("Elapsed time: " + (t1 - t0) + "ms")
-
-    sorted.foreach(println)
 
     spark.stop()
   }

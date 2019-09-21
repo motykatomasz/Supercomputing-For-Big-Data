@@ -3,9 +3,10 @@ import java.time.format.DateTimeFormatter
 
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.types._
 
-object DataFrameRepresentation {
+object DataFrameRepresentationV2 {
   case class NewsArticle (
                            GKGRECORDID: String,
                            DATE: Timestamp,
@@ -74,7 +75,7 @@ object DataFrameRepresentation {
 
     val spark = SparkSession
       .builder
-      .appName("Lab 1 DF implementation")
+      .appName("Lab 1 DF(2) implementation")
       .config("spark.master", "local")
       .getOrCreate()
 
@@ -84,12 +85,12 @@ object DataFrameRepresentation {
     val sc = spark.sparkContext
 
     val ds = spark.read
-        .format("csv")
-        .option("delimiter", "\t")
-        .option("timestampFormat", "yyyyMMddHHmmSS")
-        .schema(schema)
-        .load("./data/segment100/*.gkg.csv")
-        .as[NewsArticle]
+      .format("csv")
+      .option("delimiter", "\t")
+      .option("timestampFormat", "yyyyMMddHHmmSS")
+      .schema(schema)
+      .load("./data/segment100/*.gkg.csv")
+      .as[NewsArticle]
 
     val t0 = System.currentTimeMillis()
 
@@ -122,20 +123,18 @@ object DataFrameRepresentation {
     // for each name count how many times it is present in the dataframe
     val groupedNames = noNumber.groupByKey(x => x).count()
 
-    // sort in descending order based on the count, go from ((date, name), count) to (date, (name, count)) in order to have the desired shape for the list later
-    // then take only the top 10 elements for each date
-    val top10NamesPerDate = groupedNames.sort($"count(1)".desc)
-        .map{case ((date, name),count) => (date, (name, count))}.rdd
-        .groupByKey() //this can break order when muliple nodes
-        .mapValues(x => x.toList.take(10))
 
-    top10NamesPerDate.collect()
+    // partition by date and find the rank in each day window
+    val result = groupedNames
+      .withColumn("order", rank.over(Window.partitionBy("key._1").orderBy($"count(1)".desc)))
+      .filter(col("order") <= 10)
+
+    result.collect()
 
     val t1 = System.currentTimeMillis()
+
     // display the list of names
     println("Elapsed time: " + (t1 - t0) + "ms")
-
-    top10NamesPerDate.foreach(println)
 
     spark.stop()
   }
