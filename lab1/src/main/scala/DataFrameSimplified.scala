@@ -1,7 +1,10 @@
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.expressions.Window
+import org.apache.spark.sql.functions.udf
 import org.apache.spark.sql.types._
+
+import scala.collection.mutable.WrappedArray
 
 object DataFrameSimplified {
   case class NewsArticle (
@@ -86,7 +89,7 @@ object DataFrameSimplified {
       .option("delimiter", "\t")
       .option("timestampFormat", "yyyyMMddHHmmSS")
       .schema(schema)
-      .load("./data/segment150/*.gkg.csv")
+      .load("./data/segment500/*.gkg.csv")
       .as[NewsArticle]
 
     val t0 = System.currentTimeMillis()
@@ -106,7 +109,7 @@ object DataFrameSimplified {
 
     // flatmap the splitted elements in the list, so now we have [date, (name, number)]
     // also remove the entries that contain "Category" because they are not actually contributing to the count
-    val noNumber = removeHour.flatMap(x => x._2.map(s => (x._1, s.split(",")(0))))
+    val noNumber = removeHour.flatMap(x => x._2.filter(!_.contains("Category")).map(s => (x._1, s.split(",")(0))))
 
     // for each name count how many times it is present in the dataframe
     val groupedNames = noNumber.groupByKey(x => x).count()
@@ -116,7 +119,7 @@ object DataFrameSimplified {
       .withColumn("order", rank.over(Window.partitionBy("key._1").orderBy($"count(1)".desc)))
       .filter(col("order") <= 10)
 
-    result.collect()
+    result.collect().foreach(println)
 
     val t1 = System.currentTimeMillis()
 

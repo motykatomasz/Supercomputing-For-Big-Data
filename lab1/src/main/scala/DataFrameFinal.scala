@@ -1,15 +1,12 @@
-import java.sql.Timestamp
-import java.time.format.DateTimeFormatter
-
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.types._
 
-object DataFrameRepresentationV2 {
+object DataFrameFinal {
   case class NewsArticle (
                            GKGRECORDID: String,
-                           DATE: Timestamp,
+                           DATE: String,
                            SourceCollectionIdentifier: Integer,
                            SourceCommonName: String,
                            DocumentIdentifier: String,
@@ -44,7 +41,7 @@ object DataFrameRepresentationV2 {
     val schema = StructType(
       Array(
         StructField("GKGRECORDID", StringType),
-        StructField("DATE", TimestampType),
+        StructField("DATE", StringType),
         StructField("SourceCollectionIdentifier", IntegerType),
         StructField("SourceCommonName", StringType),
         StructField("DocumentIdentifier", StringType),
@@ -75,8 +72,8 @@ object DataFrameRepresentationV2 {
 
     val spark = SparkSession
       .builder
-      .appName("Lab 1 DF(2) implementation")
-      .config("spark.master", "local")
+      .appName("Lab 1 DF(4) implementation")
+      .config("spark.master", "local[*]")
       .getOrCreate()
 
     import spark.implicits._
@@ -87,49 +84,37 @@ object DataFrameRepresentationV2 {
     val ds = spark.read
       .format("csv")
       .option("delimiter", "\t")
-      .option("timestampFormat", "yyyyMMddHHmmSS")
       .schema(schema)
-      .load("./data/segment100/*.gkg.csv")
+      .load("./data/segment500/*.gkg.csv")
       .as[NewsArticle]
 
     val t0 = System.currentTimeMillis()
 
-    // remove rows whose AllNames attribute is null
-    val ds_filtered = ds.filter(x => x.Allnames != null)
-
-    // only use DATE and AllNames
-    val useful_columns = ds_filtered.map(x => (x.DATE, x.Allnames))
-
-    // split the names that are present in each row; the second column now is a list of splitted elements (each one being (name,number))
-    val splitNames = useful_columns.map(x => (x._1, x._2.split(";")))
-
-    // flatmap the splitted elements in the list, so now we have [date, (name, number)]
-    // also remove the entries that contain "Category" because they are not actually contributing to the count
-    val dateAndNames = splitNames.flatMap(x => x._2.map(name => (x._1, name)))
-      .filter(x => !x._2.contains("Category"))
+    // remove rows whose AllNames attribute are not null
+    val dsFiltered = ds.filter(col("AllNames").isNotNull)
 
     // removing the hour from the date
-    // we go from yyyy-mm-dd hh:mm:ss to only yyyy-mm-dd
-    val removeHour = dateAndNames
-      .map(x => (x._1.toLocalDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),x._2))
+    // we go from yyyymmddhhmmss to only yyyymmdd
+    val removeHour = dsFiltered.select(substring(col("DATE"), 0, 8).as("DATE"), col("AllNames"))
 
-    // remove the numbers from the name field; again we have a list of splitted elements, now with the shape [name, number, name, number, etc.]
-    val splitNumbers = removeHour.map(x => (x._1, x._2.split(",")))
+    // remove number associated with each name
+    val removeNumber = removeHour.select(col("DATE"), regexp_replace($"AllNames" ,"(,[0-9]+)", "").as("AllNames"))
 
-    // flatmap the list and keep only the entries without numbers in it
-    val noNumber = splitNumbers.flatMap(x => x._2.map(name => (x._1, name)))
-      .filter(x => !x._2.matches("([0-9]+)"))
+    // split the names that are present in each row
+    // now we have schema = | date | single name |
+    val splitNames = removeNumber.select(col("DATE"), explode(split(col("AllNames"), ";")).as("Name"))
 
-    // for each name count how many times it is present in the dataframe
-    val groupedNames = noNumber.groupByKey(x => x).count()
+    // remove the entries that contain "Category" because they are not actually contributing to the count
+    val filterCategory = splitNames.filter(!col("Name").contains("Category"))
 
+    // count occurence of each name by day
+    val countNames = filterCategory.groupBy("DATE", "Name").count
 
-    // partition by date and find the rank in each day window
-    val result = groupedNames
-      .withColumn("order", rank.over(Window.partitionBy("key._1").orderBy($"count(1)".desc)))
-      .filter(col("order") <= 10)
+    // order names within each day and take 10 first
+    val take10Best = countNames.withColumn("Order", rank.over(Window.partitionBy("DATE").orderBy($"count".desc)))
+      .filter(col("Order") <= 10)
 
-    result.collect()
+    take10Best.collect().foreach(println)
 
     val t1 = System.currentTimeMillis()
 

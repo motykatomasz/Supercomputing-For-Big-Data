@@ -88,7 +88,7 @@ object DataFrameRepresentation {
         .option("delimiter", "\t")
         .option("timestampFormat", "yyyyMMddHHmmSS")
         .schema(schema)
-        .load("./data/segment100/*.gkg.csv")
+        .load("./data/segment150/*.gkg.csv")
         .as[NewsArticle]
 
     val t0 = System.currentTimeMillis()
@@ -134,8 +134,6 @@ object DataFrameRepresentation {
     val t1 = System.currentTimeMillis()
     // display the list of names
     println("Elapsed time: " + (t1 - t0) + "ms")
-
-    top10NamesPerDate.foreach(println)
 
     spark.stop()
   }
