@@ -13,7 +13,6 @@ It is important to notice in this context that we have only one transformation t
 # Metric 
 We decided to change the metric we used in the first lab. In fact, in lab 1 we proposed a too "simple" metric, saying that we would have been interested only in the money spent. We realized however that this is not a sufficient metric given that we could also spend the lowest amount of money for a job that would take days or even months to be completed. For this reason, we decided to propose a metric that is a combination of money and time required for a job.
 
-The equation is: ![alt text][logo]
-[logo]: https://github.com/motykatomasz/Supercomputing-For-Big-Data/edit/master/Blogpost/img/equation.jpg "Equation used to compute the metric."
+The equation is: ![equation](https://github.com/motykatomasz/Supercomputing-For-Big-Data/edit/master/Blogpost/img/equation.jpg)
 
 We chose this metric because we realized both high values for *t* (time) and *m* (money) are to be considered not good, thus the metric would be very low if one (both) is (are) high. We aim at an application that does not take too long and that does not cost too much.
