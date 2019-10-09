@@ -55,6 +55,7 @@ Our implementation completes the job in 5 minutes ad 5 seconds, for a total expe
 
 As it is possible to notice from the figures, no particual bottleneck that is slowing down eccessively the cluster exists. The only metric that may be considered *"abnormal"* is the network usage, where the graph shows that it is nearly all the time at peak usage with 20 GB/s of bandwidth. This pushed us into investigating more this problem. Do we need more machines? Do we need the same amount of machines but with more bandwidth?
 
+# Further experiments
 We decided to investigate the second path, that is using the same amount of machines but with more bandwidth. Of course we could not jump to machines with completely different characteristics, e.g. we could not to the comparison between 20 *c4.8xlarge* machines and 20 *m.large* machines because the gap is too wide and affecting. Thus, we decided to opt for the *c4.4xlarge* machines. As the figure below shows, each machine has approximatively half of the values of a *c4.8xlarge* machine regarding the performances (that is, 16 vCPUs and 30GB of memory). The network performance however should be higher: even if for a *c4.8xlarge* machine is reported to have 10 Gigabit worth of network connection, the TAs reassured us that the label **high** represents a higher transfer rate than 10 Gigabit.
 
 ![figure 7](./img/instancetable.PNG)
