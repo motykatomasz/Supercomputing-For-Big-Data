@@ -15,13 +15,13 @@ We decided to change the metric we used in the first lab. In fact, in lab 1 we p
 
 The equation is: ![figure 1](./img/equation.jpg)
 
-We chose this metric because we realized both high values for *t* (time: expressed in hours) and *m* (money: expressed in dollars) are to be considered not good, thus the metric would be very low if one (both) is (are) high. We aim at an application that does not take too long and that does not cost too much. 
+We chose this metric because we realized both high values for *t* (time: expressed in hours) and *m* (money: expressed in dollars) are to be considered not good, thus the metric would be very low if one (both) is (are) high. We decided to express the time in hours and not in minutes or seconds because the two terms of the equation *t* and *m* needed to be in the same order of magnitude. We aim at an application that does not take too long and that does not cost too much. 
 In general, this is a good metric to compare different cluster settings that are running on the same amount of segments.
 
 # Test with other instances
 Instead of trying already with the cluster made of 20 _c4.8xlarge_ instances, we decided to approach the problem gradually, by trying to scale up and scale out the problem. We made different calculations on 3k, 10k and 30k segments with clusters with different composition. The result are reported in the figure below.
 ![figure 2](./img/bar-graph.png)
-As it is possible to notice, according to our metric, clusters with very high memory and network availability are not suited for processing small batches of data. This may be due to the higher cost they have, as the time we save in processing the same small amount of data is not enough to choose powerful clusters at the beginning. The situation is the opposite in case of clusters made of powerful machines that process larger batches. Here the potentialities of the cluster show their value and our metric confirm this behavior.
+As it is possible to notice, according to our metric, clusters with very high memory and network availability are not suited for processing small batches of data. This may be due to the higher cost they have, since the time we save by using this more powerful cluster is not enough to balance the other term in the equation. The situation is the opposite in case of clusters made of powerful machines that process larger batches. Here the potentialities of the cluster show their value and our metric confirm this behavior.
 
 _Note_: just out of curiosity, we decided to try also a small cluster of fast machines (*5 c4.4xlarge*). We ended up having the same times we had for the *20 m.large* cluster, while paying more money, thus it resulted as the worst experiment according to our metric. 
 
@@ -29,15 +29,15 @@ In the table below there are reported the time and money spent on each run.
 
 | Instance Type | # Instances | #Segments |    Time   |  Money  | exp(-(t+m)) |
 |:-------------:|:-----------:|:---------:|:---------:|:-------:|:-----------:|
-|    m.large    |      20     |     3k    |  2min 1s  | $0.0672 |    0.905    |
-|    m.large    |      20     |    10k    |  5min 12s |  $0.173 |    0.772    |
+|    m.large    |      20     |     3k    |  2min 1s  | $0.0672 |    **0.905**    |
+|    m.large    |      20     |    10k    |  5min 12s |  $0.173 |    **0.772**    |
 |    m.large    |      20     |    30k    | 16min 20s |  $0.544 |    0.443    |
 |   c4.4xlarge  |      5      |     3k    |  1min 56s |  $0.128 |    0.745    |
 |   c4.4xlarge  |      5      |    10k    |  5min 20s |  $0.354 |    0.643    |
 |   c4.4xlarge  |      5      |    30k    | 16min 34s |  $1.098 |    0.253    |
 |   c4.4xlarge  |      20     |     3k    |    25s    |  $0.110 |    0.889    |
 |   c4.4xlarge  |      20     |    10k    |  1min 14s |  $0.327 |    0.707    |
-|   c4.4xlarge  |      20     |    30k    |  2min 2s  |  $0.539 |    0.564    |
+|   c4.4xlarge  |      20     |    30k    |  2min 2s  |  $0.539 |    **0.564**    |
 
 **NOTE**: we started using spot instances, but we had problems in getting some machines assigned. For this reason we opted to use on demand machines: we accepted to pay a little more, but at least we were sure that the instances were always reserved.
 
@@ -53,10 +53,10 @@ Our implementation completes the job in 5 minutes ad 5 seconds, for a total expe
 ![figure 5](./img/20c48xlargeMEMfull.PNG)
 ![figure 6](./img/20c48xlargeNETfull.PNG)
 
-As it is possible to notice from the figures, no particual bottleneck that is slowing down eccessively the cluster exists. The only metric that may be considered *"abnormal"* is the network usage, where the graph shows that it is nearly all the time at peak usage with 20 GB/s of bandwidth. This pushed us into investigating more this problem. Do we need more machines? Do we need the same amount of machines but with more bandwidth?
+As it is possible to notice from the figures, no particual bottleneck that is slowing down eccessively the cluster exists (i.e., no clear peak or abnormal behavior appears in the graphs). The only metric that may be considered *"abnormal"* is the network usage, where the graph shows that it is nearly all the time at peak usage with 20 GB/s of bandwidth. This pushed us into investigating more this aspect. Do we need more machines? Do we need the same amount of machines but with more bandwidth?
 
 # Further experiments
-We decided to investigate the second path, that is using the same amount of machines but with more bandwidth. Of course we could not jump to machines with completely different characteristics, e.g. we could not to the comparison between 20 *c4.8xlarge* machines and 20 *m.large* machines because the gap is too wide and affecting. Thus, we decided to opt for the *c4.4xlarge* machines. As the figure below shows, each machine has approximatively half of the values of a *c4.8xlarge* machine regarding the performances (that is, 16 vCPUs and 30GB of memory). The network performance however should be higher: even if for a *c4.8xlarge* machine is reported to have 10 Gigabit worth of network connection, the TAs reassured us that the label **high** represents a higher transfer rate than 10 Gigabit.
+We decided to investigate the second path, that is using the same amount of machines but with more bandwidth. Of course we could not jump to machines with completely different characteristics, e.g. we could not to the comparison between 20 *c4.8xlarge* machines and 20 *m.large* machines because the gap is too wide and affecting. Thus, we decided to opt for the *c4.4xlarge* machines. As the figure below shows, each machine has approximatively half of the values of a *c4.8xlarge* machine regarding the performances (that is, 16 vCPUs and 30GB of memory). The network performance however should be higher: even if for a *c4.8xlarge* machine is reported to have 10 Gigabit worth of network connection, and for *c4.4xlarge* only the label **high** is reported, the TAs reassured us that the ratio of network connection per number of CPUs is actually higher in *c4.4xlarge* machines.
 
 ![figure 7](./img/instancetable.PNG)
 
