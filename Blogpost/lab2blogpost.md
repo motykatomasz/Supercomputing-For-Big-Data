@@ -51,7 +51,7 @@ Our implementation completes the job in 5 minutes ad 5 seconds, for a total expe
 
 ![figure 3](./img/overviewc48x.png)
 
-As it is possible to notice from the figures, no particual bottleneck that is slowing down eccessively the cluster exists (i.e., no clear peak or abnormal behavior appears in the graphs). However, we can clearly see that the the cpu and memory usage can still be higher. As the memory is probably bounded by some spark configuration (Spark application filters most of the data at start so we don't really need high limit of memory), the CPU seems like it's waiting for I/O, so we decided to look for other machine type that has better bandwidth/vCores ratio.
+As it is possible to notice from the figures, no particual bottleneck that is slowing down eccessively the cluster exists (i.e., no clear peak or abnormal behavior appears in the graphs). However, we can clearly see that the the cpu and memory usage can still be higher. As the memory is probably bounded by some spark configuration (Spark application filters most of the data at start so we do not really need high limit of memory), the CPU seems like it's waiting for I/O, so we decided to look for other machine type that has better bandwidth/vCores ratio.
 
 # Further experiments
 First, we opted to try others from c4 family as they are easier to compare with *c4.8xlarge* and they are compute optimized, which we thought is more suitable for application. 
@@ -93,7 +93,7 @@ Having our best cluster setups, we decided to try to tune spark and yarn options
 
 1.  EMR default configuration
 
-    As it turns out, AWS EMR sets up spark options with some predefined values based on type of machine, that we've used in our cluster. 
+    As it turns out, AWS EMR sets up spark options with some predefined values based on type of machine, that we have used in our cluster. 
     
     ![figure 9](./img/spark_defaults.png)
     
@@ -105,7 +105,7 @@ Having our best cluster setups, we decided to try to tune spark and yarn options
 
     For the *m5* family which serve as *general purpose*, it opts to always have 2vCores assigned to each executor. 
 
-    For the *r5* family, which is supposed to be memory optimized for instance it creates 1 exectuore per vCore and so it’ll not be able to take advantage of running multiple tasks in the same JVM. Maybe that's the reason it didn't perform that well for us.
+    For the *r5* family, which is supposed to be memory optimized for instance it creates 1 exectuore per vCore and so it’ll not be able to take advantage of running multiple tasks in the same JVM. Maybe that is the reason it did not perform that well for us.
  
 
     All the results to this point, were obtained using the deafult EMR configuration.
@@ -198,7 +198,7 @@ Having our best cluster setups, we decided to try to tune spark and yarn options
     ] 
     ```
 
-    Unfortunately, for some reason spark can't create 3 executors with 5 vCores (which is quite strange, because by default Spark created 4 exectuors with 4 vCores each), so it only create 2 executors per machine which results in underperformance. We can see that instead of 59, only 40 executors were created.
+    Unfortunately, for some reason spark cannot create 3 executors with 5 vCores (which is quite strange, because by default Spark created 4 exectuors with 4 vCores each), so it only create 2 executors per machine which results in underperformance. We can see that instead of 59, only 40 executors were created.
 
     ![figure 16](./img/executors_config1.png)
 
