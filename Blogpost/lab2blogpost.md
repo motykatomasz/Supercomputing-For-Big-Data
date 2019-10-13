@@ -125,7 +125,7 @@ In the end the best configuration, based on our metric, turned out to be 10 *m5.
 
 Having our best cluster setups, we decided to try to tune spark and yarn options to increase the performance of our application. We decided to take a closer look on how Spark on EMR behaves in 3 different configuration versions:
 
-1.  EMR default configuration
+1.  **EMR default configuration**
 
     As it turns out, AWS EMR sets up spark options with some predefined values based on the type of machine, that we're using in our cluster. 
     
@@ -146,7 +146,7 @@ Having our best cluster setups, we decided to try to tune spark and yarn options
     **NOTE**:
     All the results to this point, were obtained using the deafult EMR configuration.
 
-2. Enabling maximum resource allocation option
+2. **Enabling maximum resource allocation option**
 
     [1] gives a hint that it is possible for spark to set option *maximizeResourceAllocation* to *true*. This option will set some spark options based on this table :
 
@@ -207,7 +207,7 @@ Having our best cluster setups, we decided to try to tune spark and yarn options
 
     Supposedly, the problem with very powerful executors is that, the HDFS client has troubles dealing with large amount of concurrent threads. It was observed, that HDFS achieves full write throughput with 5 cores per executor. We will try to examine this in the next point.
 
-3.  Setting our own spark options
+3.  **Setting our own spark options**
 
     We tried to follow the aws guide for maximizing spark performance [2]. For our 20 nodes *c4.4xlarge* cluster we calculated the following properties:
 
