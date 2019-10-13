@@ -57,13 +57,15 @@ Our implementation completes the job in 5 minutes ad 5 seconds, for a total expe
 ![figure 3](./img/overviewc48x.png)
 <center style="font-style:italic;">Figure 2. Usage of resources for 20 c4.x8large machines.</center>
 
+
 As it is possible to notice from the figures, no particual bottleneck that is slowing down eccessively the cluster exists (i.e., no clear peak or abnormal behavior appears in the graphs). However, we can clearly see that the the cpu (~55%) and memory usage can still be higher. As the memory is probably bounded by some spark configuration (Spark application filters most of the data at start so we don't really need high memory limit), the CPU seems like it's waiting for I/O. Tjerefore, we decided to look for other machine type that has better bandwidth/vCores ratio.
 
 # Further experiments
 First, we opted to try others from c4 family as they are easier to compare with *c4.8xlarge* and they are compute optimized, which we thought is more suitable for application. 
 
 ![figure 4](./img/instancetable.PNG)
-<center style="font-style:italic;">Figure 3. Characteristics of c4 family machines.</center>
+*Figure 3. Characteristics of c4 family*
+
 
 
 In the table below we present outcome of series of measurments for th *c4* family:
@@ -87,6 +89,7 @@ As, it turned out *c4.4xlarge* and *c4.2xlarge* has the same bandwidth/vCores ra
 <center style="font-style:italic;">Figure 4. Usage of resources for 20 c4.x4large machines</center>
 
 
+
 We also decided to test out different machine types, namely *r5* family (memory optimized), *m5* family (general purpose) and *c5*, which is newer version of *c4*.
 
 | Instance Type | # Instances | Amount Processed |   Time   |  Money | exp(-(t+m)) |
@@ -99,6 +102,7 @@ We also decided to test out different machine types, namely *r5* family (memory 
 
 ![figure 6](./img/20m5.4xlarge_Default.png)
 <center style="font-style:italic;">Figure 5. Usage of resources for 20 m5.x4large machines</center>
+
 
 In the table below we present some more measurments for *m5* machines clusters:
 
