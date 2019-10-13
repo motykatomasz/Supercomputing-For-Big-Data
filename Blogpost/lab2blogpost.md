@@ -49,10 +49,7 @@ At first, we had problems in running the entire dataset because of memory errors
 
 Our implementation completes the job in 5 minutes ad 5 seconds, for a total expenditure of $2.695; both metrics are far below the requirements reported in the lab manual, respectively below 30 minutes and $12. These results yield a metric of 0.0620. However, we decided to analyze the cluster performances to check the presence of eventual bottlenecks. Below are reported the visualizations obtained through Ganglia.
 
-![figure 3](./img/20c48xlargeCPUfull.PNG)
-![figure 4](./img/20c48xlargeLOADfull.PNG)
-![figure 5](./img/20c48xlargeMEMfull.PNG)
-![figure 6](./img/20c48xlargeNETfull.PNG)
+![figure 3](./img/overviewc48x.png)
 
 As it is possible to notice from the figures, no particual bottleneck that is slowing down eccessively the cluster exists (i.e., no clear peak or abnormal behavior appears in the graphs). However, we can clearly see that the the cpu and memory usage can still be higher. As the memory is probably bounded by some spark configuration (Spark application filters most of the data at start so we don't really need high limit of memory), the CPU seems like it's waiting for I/O, so we decided to look for other machine type that has better bandwidth/vCores ratio.
 
@@ -216,9 +213,8 @@ Having our best cluster setups, we decided to try to tune spark and yarn options
     Quite hopeless, since our application is pretty straightforward. 
 
 
-# Summary
+# Conclusions
+In this lab we were required to process the entire GDELT Dataset (~4.1TB) in under 30 minutes and spending less than $12. With the settings that were required by the lab manual, our implementation is able to complete the job in about 5 minutes, spending just $2.6. Furthermore, we defined a metric based on time and money spent, that helped us in the investigation of which cluster configuration was the best. This led us to run some tests on different clusters with various types of machines, after a thorough study of the performances report obtained from Ganglia. In this sense, we managed to improve both time and money-wise the performances with a different machine with respect to the one advised in the manual, namely the *m5.4xlarge*.
 
-In the end we didn't succeed in tuning our spark application. Since our application is quite straightforward (it doesn't use for instance: caching or broadcast variables)and we are using DataSets which give us tons of optimization for free, it is quite hard to improve it's performance, especially for people new o spark, regarding that the default configuration that AWS sets up, turns out to be quite effective. 
-
-To improve the performance, it'd require to dive really deep into spark optimization techinques which was not feasible based on time and money limit. The fact that few days before the deadline, during the day, there were problems with provisioning spot machines.
+Beside this study, we tried to dive in the optimization techniques of Spark. Since the application we developed is quite straightforward (e.g. no caching or broadcast variables have been used) and we are using DataSets which give us tons of optimization for free, it is quite hard to improve its performance. We believe optimization is a topic that requires much more time and deeper study with respect to basic knowledge as we have acquired so far. However, the default configuration that AWS sets up turns out to be quite effective, thus we have been able of satisfying the requirements with no modifications to our original code. 
     
