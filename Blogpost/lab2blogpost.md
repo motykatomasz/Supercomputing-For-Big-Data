@@ -47,30 +47,23 @@ After these tests, we saw that our implementation works fine for the task and it
 
 At first, we had problems in running the entire dataset because of memory errors: the cluster was not able to accept that huge amount of data in its standard settings. After debugging, we found out the problem was in the driver's memory: indeed, with an additional `spark-submit` command (namely, `--driver-memory`) we set the driver memory to 2GB instead of the default 512MB.
 
-Our implementation completes the job in 5 minutes ad 5 seconds, for a total expenditure of $2.695; both metrics are far below the requirements reported in the lab manual, respectively below 30 minutes and $12. These results yield a metric of 0.0620. However, we decided to analyze the cluster performances to check the presence of eventual bottlenecks. Here below are reported the visualization obtained through Ganglia.
+Our implementation completes the job in 5 minutes ad 5 seconds, for a total expenditure of $2.695; both metrics are far below the requirements reported in the lab manual, respectively below 30 minutes and $12. These results yield a metric of 0.0620. However, we decided to analyze the cluster performances to check the presence of eventual bottlenecks. Below are reported the visualizations obtained through Ganglia.
 
 ![figure 3](./img/20c48xlargeCPUfull.PNG)
 ![figure 4](./img/20c48xlargeLOADfull.PNG)
 ![figure 5](./img/20c48xlargeMEMfull.PNG)
 ![figure 6](./img/20c48xlargeNETfull.PNG)
 
-As it is possible to notice from the figures, no particual bottleneck that is slowing down eccessively the cluster exists (i.e., no clear peak or abnormal behavior appears in the graphs). However, we can clearly see that the the cpu and memory usage can still be higher. As the memory is probably bounded by some spark configuration (Spark application filters most of the data at start so we don't really need a lot of memory), the CPU seems like it's waiting for I/O so we decided to look for other machine type that has better bandwidth/vCores ratio.
+As it is possible to notice from the figures, no particual bottleneck that is slowing down eccessively the cluster exists (i.e., no clear peak or abnormal behavior appears in the graphs). However, we can clearly see that the the cpu and memory usage can still be higher. As the memory is probably bounded by some spark configuration (Spark application filters most of the data at start so we don't really need high limit of memory), the CPU seems like it's waiting for I/O, so we decided to look for other machine type that has better bandwidth/vCores ratio.
 
 # Further experiments
-We opted to try others from c4 family as they are compute optimized. Of course we could not jump to machines with completely different characteristics, e.g. we could not to the comparison between 20 *c4.8xlarge* machines and 20 *m.large* machines because the gap is too wide and affecting. 
-<!--The network performance however should be higher: even if for a *c4.8xlarge* machine is reported to have 10 Gigabit worth of network connection, and for others only the label **high** is reported, the TAs reassured us that the ratio of network connection per number of CPUs might be higher in other machines of *c4 family*. -->
+First, we opted to try others from c4 family as they are easier to compare with *c4.8xlarge* and they are compute optimized, which we thought is more suitable for application. 
 
 ![figure 7](./img/instancetable.PNG)
 
-Running the full dataset on a cluster of 20 *c4.4xlarge* machines took 8 minutes and 48 seconds and costed $2.334. The available bandwidth turns out to be 2 times less than for *c4.8xlarge* which results in the same bandwidht/cpu ratio however we obtained higher CPU usage which is shown on the figure below.
 
-![figure 8](./img/20c4.x4large_Full.png)
-
-
-
-On a first view, the overall performance could seem worse with respect to the initial cluster. If we take a look at the metric we have defined instead, we can see this values of money and time yield 0.0837, that is actually better than the original 0.0620. 
-
-Next, we played around with different cluster setups using mainly *c4.8xlarge*, *c4.4xlarge*, *c4.2xlarge* machines:
+In the table below we present outcome of series of measurments for th *c4* family:
+<!--The network performance however should be higher: even if for a *c4.8xlarge* machine is reported to have 10 Gigabit worth of network connection, and for others only the label **high** is reported, the TAs reassured us that the ratio of network connection per number of CPUs might be higher in other machines of *c4 family*. -->
 
 | Instance Type | # Instances | Amount Processed |   Time   |  Money | exp(-(t+m)) |
 |:-------------:|:-----------:|:----------------:|:--------:|:------:|:-----------:|
@@ -85,16 +78,21 @@ Next, we played around with different cluster setups using mainly *c4.8xlarge*, 
 |   c4.2xlarge  |      15     |       4.1TB      | 24min 3s| $2.388 |    0.0615 | 
 |   c4.2xlarge  |      10     |       4.1TB      | 37min | $2.454 |    0.0464 | 
 
+As, it turned out *c4.4xlarge* and *c4.2xlarge* has the same bandwidth/vCores ratio as *c4.8xlarge* (which was not obvious, since AWS labeled bandwidth available on the interface as *high*) so the characteristic we obtained in Ganglia were quite similar. Only in the case of running 20 *c4.4xlarge* mchines we obtained slightly higher CPU usage which resulted in higher metric.
+
+![figure 8](./img/20c4.x4large_Full.png)
 
 
-<!-- Again, it is possible to notice a shift in the behaviour as the amount of data to process increases: it seems that the most powerful cluster outstands the competition until the network does not become too congested, in which case a cluster with higher network performances would prevale. -->
+We also decided to test out different machine types, namely *r5* family (memory optimized) and *m5* family (general purpose). *r5* machines turned out to perform worse than *c4* family so we dropped them. However *m5*, namely *m5.4xlarge*, turned out to have better performance out of the box than *c4* machines. 
 
-In the end the best configuration, based on our metric, turned out to be 20 *c4.4xlarge* machines. It also yielded the highest CPU usage of ~65%. Thus, we decided to select this configuration and try to improve it's performance by tuning Spark options.
+//table with m5 results
+
+In the end the best configuration, based on our metric, turned out to be 20 *c4.4xlarge* machines for the *c4* family and xxx for the *m5* family. We decided to select those configurations and try to improve their performance by tuning Spark options.
 
 
 # Tuning Spark
 
-Having our best cluster setup, we decided to try to tune spark and yarn options to increase the performance of our application. As we can see from the pictures, there is still some space to improve usage of the resources. We decided to compare 3 different configuration versions:
+Having our best cluster setups, we decided to try to tune spark and yarn options to increase the performance of our application. We decided to take a closer look how Spark on EMR behaves in 3 different configuration versions:
 
 1.  EMR default configuration
 
@@ -102,13 +100,16 @@ Having our best cluster setup, we decided to try to tune spark and yarn options 
     
     ![figure 9](./img/spark_defaults.png)
     
-    For the *c4* machines family, it apparently determines the number of executors in a way that each will have 4 vCores assigned.
+    For the *c4* machines family, which is supposed to be compute optimized, it apparently determines the number of executors in a way that each will have 4 vCores assigned.
 
     ![figure 10](./img/default_executors.png)
 
     So for *c4.8xlarge*, *c4.4xlarge*, *c4.2xlarge* it creates 9, 4, 2 executors per machine respectively.
 
-    For the *r5* family, which is supposed to be memory optimized for instance ite creates 1 exectuore per vCore as it can manage to assign proper amount of memory to it anyway.
+    For the *m5* family which serve as *general purpose*, it opts to always have 2vCores assigned to each executor. 
+
+    For the *r5* family, which is supposed to be memory optimized for instance it creates 1 exectuore per vCore and so it’ll not be able to take advantage of running multiple tasks in the same JVM. Maybe that's the reason it didn't perform that well for us.
+ 
 
     All the results to this point, were obtained using the deafult EMR configuration.
 
@@ -158,18 +159,23 @@ Having our best cluster setup, we decided to try to tune spark and yarn options 
     ```
     yielded more expected behaviour. In this case, Spark created one executor per machine and assigned to it maximum amount of the resources (16 vCores). 
 
-    ![figure 13](./img/executors_with_maximum_resource.png)
+    ![figure 14](./img/executors_with_maximum_resource.png)
 
-    ![figure 13](./img/max_res_no_dyn.png)
+    ![figure 15](./img/max_res_no_dyn.png)
+
+    With all 16 cores per executor, apart from ApplicationManager and daemon processes are not counted for, HDFS throughput will hurt and it’ll result in excessive garbage results
 
     For both cases we obtained processing times 11min and 9.7min respectively which is distincly longer than with the default configuration. 
+
+
+    //the same for m5 
 
 3.  Setting our own spark options
 
     We tried to follow the aws guide for maximizing spark performance [https://aws.amazon.com/blogs/big-data/best-practices-for-successfully-managing-memory-for-apache-spark-applications-on-amazon-emr/?fbclid=IwAR0FktESsXL5iFsnhwpqvXYfp7Dgj42mdT3aEqGfANTJsqPQXBDoB3so_Lk]. For our 20 nodes *c4.4xlarge* cluster we calculated the following properties:
 
         spark.executor.cores = 5 (5 vcores per executor)
-        spark.executor.instances = (16-1)/5 = 3 (executors per machine)
+        spark.executor.instances = (3*20) - 1 = 59 (total number of executors)
         spark.executors.memory = (30/3) * 0.9 = 9G (Memory for 1 executor)
         spark.yarn.executor.memoryOverhead = (30/3) * 0.1 = 1G
         spark.driver.memory = spark.executors.memory = 9G
@@ -184,7 +190,7 @@ Having our best cluster setup, we decided to try to tune spark and yarn options 
             "Properties": {
                 "spark.dynamicAllocation.enabled": "false",
                 "spark.executor.cores": "5",
-                "spark.executor.instances": "3",
+                "spark.executor.instances": "59",
                 "spark.executors.memory": "9G",
                 "spark.yarn.executor.memoryOverhead": "1G",
                 "spark.driver.memory": "9G",
@@ -195,11 +201,15 @@ Having our best cluster setup, we decided to try to tune spark and yarn options 
     ] 
     ```
 
-    Unfortunately, for some reason spark can't create 3 executors with 5 vCores (which is quite strange, because by default Spark created 4 exectuors with 4 vCores each), so it only create 2 executors per machine which results in underperformance.
+    Unfortunately, for some reason spark can't create 3 executors with 5 vCores (which is quite strange, because by default Spark created 4 exectuors with 4 vCores each), so it only create 2 executors per machine which results in underperformance. We can see that instead of 59, only 40 executors were created.
 
-    ![figure 13](./img/executors_config2.png)
+    ![figure 16](./img/executors_config1.png)
+
+    ![figure 17](./img/executors_config2.png)
 
     We tried many different configuration setups on many different clusters and still we were always ending up with worse than the default performance. 
+
+    //the same for m5
 
 4.  Maybe try repartitioning
 
