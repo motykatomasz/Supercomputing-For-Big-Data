@@ -1,3 +1,6 @@
+# Supercomputing for Big Data: Lab 2 - Group 25
+
+
 # Introduction
 In this second lab we will see the behavior of our first lab's implementation running on a real cluster. Through a series of measurements with different settings, we will check how our implementation will scale up/out.
 
@@ -54,7 +57,7 @@ Our implementation completes the job in 5 minutes ad 5 seconds, for a total expe
 ![figure 3](./img/overviewc48x.png)
 <center style="font-style:italic;">Figure 2. Usage of resources for 20 c4.x8large machines.</center>
 
-As it is possible to notice from the figures, no particual bottleneck that is slowing down eccessively the cluster exists (i.e., no clear peak or abnormal behavior appears in the graphs). However, we can clearly see that the the cpu and memory usage can still be higher. As the memory is probably bounded by some spark configuration (Spark application filters most of the data at start so we don't really need high memory limit), the CPU seems like it's waiting for I/O. Tjerefore, we decided to look for other machine type that has better bandwidth/vCores ratio.
+As it is possible to notice from the figures, no particual bottleneck that is slowing down eccessively the cluster exists (i.e., no clear peak or abnormal behavior appears in the graphs). However, we can clearly see that the the cpu (~55%) and memory usage can still be higher. As the memory is probably bounded by some spark configuration (Spark application filters most of the data at start so we don't really need high memory limit), the CPU seems like it's waiting for I/O. Tjerefore, we decided to look for other machine type that has better bandwidth/vCores ratio.
 
 # Further experiments
 First, we opted to try others from c4 family as they are easier to compare with *c4.8xlarge* and they are compute optimized, which we thought is more suitable for application. 
@@ -78,7 +81,7 @@ In the table below we present outcome of series of measurments for th *c4* famil
 |   c4.2xlarge  |      15     |       4.1TB      | 24min 3s| $2.388 |    0.0615 | 
 |   c4.2xlarge  |      10     |       4.1TB      | 37min | $2.454 |    0.0464 | 
 
-As, it turned out *c4.4xlarge* and *c4.2xlarge* has the same bandwidth/vCores ratio as *c4.8xlarge* (which was not obvious, since AWS labeled bandwidth available on the interface as *high*) so the characteristic we obtained in Ganglia were quite similar. Only in the case of running 20 *c4.4xlarge* machines we obtained slightly higher CPU usage which resulted in higher metric.
+As, it turned out *c4.4xlarge* and *c4.2xlarge* has the same bandwidth/vCores ratio as *c4.8xlarge* (which was not obvious, since AWS labeled bandwidth available on the interface as *high*), so the characteristic we obtained in Ganglia were quite similar. Only in the case of running 20 *c4.4xlarge* machines,we obtained slightly higher CPU usage (~62%), which resulted in higher value of our metric.
 
 ![figure 5](./img/20c4.x4large_Full.png)
 <center style="font-style:italic;">Figure 4. Usage of resources for 20 c4.x4large machines</center>
@@ -92,7 +95,7 @@ We also decided to test out different machine types, namely *r5* family (memory 
 |   m5.4xlarge  |      20     |       4.1TB      | 7min 6s | $1.818 |  **0.1443** |
 |   r5.4xlarge  |      20     |       4.1TB      | 9min 12s | $3.058 |  0.040 |
 
-*c5* machines turned out to perform slower than *c4* but due to it's lower rice it resulted in higher metric. The performance of *r5* machines wasn't that great either and combined with their high price, they weren't good choice too. However, *m5* family, namely *m5.4xlarge*, turned out to have better performance out of the box than *c4* machines. It's probably because the *m5.4xlarge* has the same amount of vCores as *c4.4xlarge*, but has little bit higher bandwidth available (cumulative was about 12,5Gb/sec whereas for *c4* it was about 10Gb/sec), which results in better bandwidth/cVores ratio.
+*c5* machines turned out to perform slower than *c4* but due to it's lower price, they resulted in higher metric. The performance of *r5* machines wasn't that great either and combined with their high price, they weren't good choice. However, *m5* family, namely *m5.4xlarge*, turned out to have better performance out of the box than *c4* machines. It's probably because the *m5.4xlarge* has the same amount of vCores as *c4.4xlarge*, but has little bit higher bandwidth available (cumulative was about 12,5Gb/sec whereas for *c4* it was about 10Gb/sec), which results in better bandwidth/vCores ratio and therefore, better CPU usage (~75%).
 
 ![figure 6](./img/20m5.4xlarge_Default.png)
 <center style="font-style:italic;">Figure 5. Usage of resources for 20 m5.x4large machines</center>
@@ -133,7 +136,7 @@ Having our best cluster setups, we decided to try to tune spark and yarn options
 
     For the *r5* family, which is supposed to be memory optimized, it creates 1 exectuore per vCore. The obvious downside of this approaach is that it’ll not be able to take advantage of running multiple tasks in the same JVM. 
 
-    For the *m5* family which serve as *general purpose*, it opts to always have 2vCores assigned to each executor. We can see that it's somewhat balanced approach between memory and compute oriented machines.
+    For the *m5* family, which serves as *general purpose*, it opts to always have 2 vCores assigned to each executor. We can see that it's somewhat balanced approach between memory and compute oriented machines.
 
     **NOTE**:
     All the results to this point, were obtained using the deafult EMR configuration.
@@ -145,7 +148,7 @@ Having our best cluster setups, we decided to try to tune spark and yarn options
     ![figure 11](./img/spark_defaults_maximize.png)
     <center style="font-style:italic;">Figure 8. Characteristics of Spark defaults set by EMR when mxaimizing resource allocation.</center>
 
-    We first, tried this out with 20 *c4.x4large* machines. Passing this configuration:
+    First, we tried this out with 20 *c4.x4large* machines. Passing this configuration:
     ```json
     [
         {
@@ -190,12 +193,12 @@ Having our best cluster setups, we decided to try to tune spark and yarn options
     ![figure 14](./img/executors_with_maximum_resource.png)        
     <center style="font-style:italic;">Figure 11. Executors for 20 c4.4x large machines cluster with maximized allocation. (2)</center>
 
-    Unfortunately, it also didn't result in increased usage of resources. I took 9.7 minutes for application to finish.
+    Unfortunately, it also didn't result in increased usage of resources. I took 9.7 minutes for application to finish (8min 48s with default configuration).
 
     ![figure 15](./img/max_res_no_dyn.png)
         <center style="font-style:italic;">Figure 12. Usage of resources for 20 c4.x4large machines when maximizing resource allocation. (2)</center>
 
-    Next, we tried passing only the configuration with dynamic allocation disabled to 20 *m5.x4large* cluster. However, it also resulted in the downgrade of performance. Our application finished after 11.2 minutes (7min 6s with default configuration).
+    Next, we tried passing the second configuration, with dynamic allocation disabled, to 20 *m5.x4large* cluster. However, it also resulted in the downgrade of performance. Our application finished after 11.2 minutes (7min 6s with default configuration).
 
     Supposedly, the problem with very powerful executors is that, the HDFS client has troubles dealing with large amount of concurrent threads. It was observed, that HDFS achieves full write throughput with 5 cores per executor. We will try to examine this in the next point.
 
@@ -274,7 +277,7 @@ In the end we didn't succeed in tuning our spark application. Since our applicat
 
 To improve the performance, it'd require to dive really deep into spark optimization techinques which was not feasible based on time and money limits. The fact that few days before the deadline, during the day, there were problems with provisioning spot machines was also slowing down work a little bit.
 
-However, we managed to prove, that you can easily increase your spark application performance just by observing resource usage and chosing the right type of machine.
+However, we managed to prove, that you can easily increase the preformance of your spark application, just by observing usage of resources and chosing the right type of machines.
 
 
 # Resources 
