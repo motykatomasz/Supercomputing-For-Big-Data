@@ -24,7 +24,7 @@ In general, this is a good metric to compare different cluster settings that are
 # Test with other instances
 Instead of trying already with the cluster made of 20 _c4.8xlarge_ instances, we decided to approach the problem gradually, by trying to scale up and scale out the problem. We made different calculations on 3k, 10k and 30k segments with clusters with different composition. The result are reported in the figure below.
 ![figure 2](./img/bar-graph.png)
-<center style="font-style:italic;"> Figure 1. Metric behaviour for different clusters. </center>
+*Figure 1. Metric behaviour for different clusters.*
 
 As it is possible to notice, according to our metric, clusters with very high memory and network bandwidth are not suited for processing small batches of data. This may be due to the higher cost they have, since the time we save by using this more powerful cluster is not enough to balance the other term in the equation. The situation is the opposite in case of clusters made of powerful machines that process larger batches. There, the potentialities of the clusters, show their's value and our metric confirm this behavior.
 
@@ -55,7 +55,7 @@ At first, we had problems in running the entire dataset because of memory errors
 Our implementation completes the job in 5 minutes ad 5 seconds, for a total expenditure of $2.695; both metrics are far below the requirements reported in the lab manual, respectively below 30 minutes and $12. These results yield a metric of 0.0620. However, we decided to analyze the cluster performances to check the presence of eventual bottlenecks. Below are reported the visualizations obtained through Ganglia.
 
 ![figure 3](./img/overviewc48x.png)
-<center style="font-style:italic;">Figure 2. Usage of resources for 20 c4.x8large machines.</center>
+**Figure 2.** *Usage of resources for 20 c4.x8large machines.*
 
 
 As it is possible to notice from the figures, no particual bottleneck that is slowing down eccessively the cluster exists (i.e., no clear peak or abnormal behavior appears in the graphs). However, we can clearly see that the the cpu (~55%) and memory usage can still be higher. As the memory is probably bounded by some spark configuration (Spark application filters most of the data at start so we don't really need high memory limit), the CPU seems like it's waiting for I/O. Tjerefore, we decided to look for other machine type that has better bandwidth/vCores ratio.
@@ -64,7 +64,7 @@ As it is possible to notice from the figures, no particual bottleneck that is sl
 First, we opted to try others from c4 family as they are easier to compare with *c4.8xlarge* and they are compute optimized, which we thought is more suitable for application. 
 
 ![figure 4](./img/instancetable.PNG)
-*Figure 3. Characteristics of c4 family*
+**Figure 3.** *Characteristics of c4 family.*
 
 
 
@@ -86,7 +86,7 @@ In the table below we present outcome of series of measurments for th *c4* famil
 As, it turned out *c4.4xlarge* and *c4.2xlarge* has the same bandwidth/vCores ratio as *c4.8xlarge* (which was not obvious, since AWS labeled bandwidth available on the interface as *high*), so the characteristic we obtained in Ganglia were quite similar. Only in the case of running 20 *c4.4xlarge* machines,we obtained slightly higher CPU usage (~62%), which resulted in higher value of our metric.
 
 ![figure 5](./img/20c4.x4large_Full.png)
-<center style="font-style:italic;">Figure 4. Usage of resources for 20 c4.x4large machines</center>
+**Figure 4.** *Usage of resources for 20 c4.x4large machines.*
 
 
 
@@ -101,7 +101,7 @@ We also decided to test out different machine types, namely *r5* family (memory 
 *c5* machines turned out to perform slower than *c4* but due to it's lower price, they resulted in higher metric. The performance of *r5* machines wasn't that great either and combined with their high price, they weren't good choice. However, *m5* family, namely *m5.4xlarge*, turned out to have better performance out of the box than *c4* machines. It's probably because the *m5.4xlarge* has the same amount of vCores as *c4.4xlarge*, but has little bit higher bandwidth available (cumulative was about 12,5Gb/sec whereas for *c4* it was about 10Gb/sec), which results in better bandwidth/vCores ratio and therefore, better CPU usage (~75%).
 
 ![figure 6](./img/20m5.4xlarge_Default.png)
-<center style="font-style:italic;">Figure 5. Usage of resources for 20 m5.x4large machines</center>
+**Figure 5.** *Usage of resources for 20 m5.x4large machines.*
 
 
 In the table below we present some more measurments for *m5* machines clusters:
@@ -129,12 +129,12 @@ Having our best cluster setups, we decided to try to tune spark and yarn options
     As it turns out, AWS EMR sets up spark options with some predefined values based on the type of machine, that we're using in our cluster. 
     
     ![figure 7](./img/spark_defaults.png)
-    <center style="font-style:italic;">Figure 6. Characteristics of Spark defaults set by EMR.</center>
+    **Figure 6.** *Characteristics of Spark defaults set by EMR.*
     
     For the *c4* machines family, which is supposed to be compute optimized, it determines the number of executors in a way that each will have 4 vCores assigned.
 
     ![figure 8](./img/default_executors.png)
-    <center style="font-style:italic;">Figure 7. Executors for 20 c4.4x large machines cluster.</center>
+    **Figure 7.** *Executors for 20 c4.4x large machines cluster.*
 
     So for *c4.8xlarge*(36 vCores), *c4.4xlarge*(16 vCores), *c4.2xlarge*(8 vCores) it creates 9, 4, 2 executors per machine respectively.
 
@@ -150,7 +150,7 @@ Having our best cluster setups, we decided to try to tune spark and yarn options
     [1] gives a hint that it is possible for spark to set option *maximizeResourceAllocation* to *true*. This option will set some spark options based on this table :
 
     ![figure 11](./img/spark_defaults_maximize.png)
-    <center style="font-style:italic;">Figure 8. Characteristics of Spark defaults set by EMR when mxaimizing resource allocation.</center>
+    **Figure 8.** *Characteristics of Spark defaults set by EMR when mxaimizing resource allocation.*
 
     First, we tried this out with 20 *c4.x4large* machines. Passing this configuration:
     ```json
@@ -166,13 +166,13 @@ Having our best cluster setups, we decided to try to tune spark and yarn options
     to our spark application, yielded some strange result at first. Spark during runtime created 38 executors, where each had maximum number of vCores (16) assigned and half of them processed all the data and other half did just small amount of tasks as can be seen in the picture below:
 
     ![figure 12](./img/executors_with_maximum_resource_and_dynamic.png)
-        <center style="font-style:italic;">Figure 9. Executors for 20 c4.4x large machines cluster with maximized allocation. (1)</center>
+        **Figure 9.** *Executors for 20 c4.4x large machines cluster with maximized allocation. (1)*
 
     This behaviour was caused by the *spark.dynamicAllocation* option enabled. As the documentation states [1], *spark.dynamicAllocation* option is set to *true* by default. In this case, at some point Spark decided to kill all the executors and create new ones for some reason. We didn't obtain better resources usage and our application finished after 11 minutes (8min 48s with default configuration).
 
     
     ![figure 13](./img/max_res.png)
-    <center style="font-style:italic;">Figure 10. Usage of resources for 20 c4.x4large machines when maximizing resource allocation. (1)</center>
+    **Figure 10.** *Usage of resources for 20 c4.x4large machines when maximizing resource allocation. (1)*
 
 
     However, passing this configuration:
@@ -195,12 +195,12 @@ Having our best cluster setups, we decided to try to tune spark and yarn options
     yielded more expected behaviour. In this case, Spark created one executor per machine and assigned to it maximum amount of the resources (16 vCores). 
 
     ![figure 14](./img/executors_with_maximum_resource.png)        
-    <center style="font-style:italic;">Figure 11. Executors for 20 c4.4x large machines cluster with maximized allocation. (2)</center>
+    **Figure 11.** *Executors for 20 c4.4x large machines cluster with maximized allocation. (2)*
 
     Unfortunately, it also didn't result in increased usage of resources. I took 9.7 minutes for application to finish (8min 48s with default configuration).
 
     ![figure 15](./img/max_res_no_dyn.png)
-        <center style="font-style:italic;">Figure 12. Usage of resources for 20 c4.x4large machines when maximizing resource allocation. (2)</center>
+        **Figure 12.** *Usage of resources for 20 c4.x4large machines when maximizing resource allocation. (2)*
 
     Next, we tried passing the second configuration, with dynamic allocation disabled, to 20 *m5.x4large* cluster. However, it also resulted in the downgrade of performance. Our application finished after 11.2 minutes (7min 6s with default configuration).
 
@@ -240,10 +240,10 @@ Having our best cluster setups, we decided to try to tune spark and yarn options
     Unfortunately, for some reason spark can't create 3 executors with 5 vCores (which is quite strange, because by default Spark created 4 exectuors with 4 vCores each), so it only creates 2 executors per machine  with 5 vCores each, which results in underperformance. We can see that instead of 59, only 40 executors were created.
 
     ![figure 16](./img/executors_config1.png)
-    <center style="font-style:italic;">Figure 13. Executors for 20 c4.4x large machines cluster with our configuration.</center>
+    **Figure 13.** *Executors for 20 c4.4x large machines cluster with our configuration.*
 
     ![figure 17](./img/executors_config2.png)
-    <center style="font-style:italic;">Figure 14. Usage of resources for 20 c4.x4large machines with our configuration.</center>
+    **Figure 14.** *Usage of resources for 20 c4.x4large machines with our configuration.*
 
 
     Similarly for the *m5.x4large* we tried this configuration:
@@ -265,10 +265,10 @@ Having our best cluster setups, we decided to try to tune spark and yarn options
         }
     ] 
     ```
-    but the result was the same.
+    but the result was the same - less executors than configured and decrease in performance.
 
     ![figure 14](./img/20m5.x4large_Full_config.png)
-    <center style="font-style:italic;">Figure 15. Usage of resources for 20 m5.x4large machines with our configuration.</center>
+    **Figure 15.** *Usage of resources for 20 m5.x4large machines with our configuration.*
 
    
 
