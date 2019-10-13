@@ -51,7 +51,8 @@ Our implementation completes the job in 5 minutes ad 5 seconds, for a total expe
 
 ![figure 3](./img/overviewc48x.png)
 
-As it is possible to notice from the figures, no particual bottleneck that is slowing down eccessively the cluster exists (i.e., no clear peak or abnormal behavior appears in the graphs). However, we can clearly see that the the cpu and memory usage can still be higher. As the memory is probably bounded by some spark configuration (Spark application filters most of the data at start so we do not really need high limit of memory), the CPU seems like it's waiting for I/O, so we decided to look for other machine type that has better bandwidth/vCores ratio.
+
+As it is possible to notice from the figures, no particual bottleneck that is slowing down eccessively the cluster exists (i.e., no clear peak or abnormal behavior appears in the graphs). However, we can clearly see that the the cpu and memory usage can still be higher. As the memory is probably bounded by some spark configuration (Spark application filters most of the data at start so we don't really need high limit of memory), the CPU seems like it's waiting for I/O, so we decided to look for other machine type that has better bandwidth/vCores ratio.
 
 # Further experiments
 First, we opted to try others from c4 family as they are easier to compare with *c4.8xlarge* and they are compute optimized, which we thought is more suitable for application. 
@@ -80,9 +81,22 @@ As, it turned out *c4.4xlarge* and *c4.2xlarge* has the same bandwidth/vCores ra
 ![figure 8](./img/20c4.x4large_Full.png)
 
 
-We also decided to test out different machine types, namely *r5* family (memory optimized) and *m5* family (general purpose). *r5* machines turned out to perform worse than *c4* family so we dropped them. However *m5*, namely *m5.4xlarge*, turned out to have better performance out of the box than *c4* machines. 
+We also decided to test out different machine types, namely *r5* family (memory optimized) and *m5* family (general purpose). *r5* machines turned out to perform worse than *c4* family so we dropped them. However *m5*, namely *m5.4xlarge*, turned out to have better performance out of the box than *c4* machines. It's probably because the *m5.4xlarge* has the same amont of vCores as *c4.4xlarge* but has little bit higher bandwidth available., which results in better bandwidth/cpu ratio.
 
-//table with m5 results
+![figure 8](./img/20m5.4xlarge_Default.png)
+
+In the table below we present measurments for some *m5* machines
+
+| Instance Type | # Instances | Amount Processed |   Time   |  Money | exp(-(t+m)) |
+|:-------------:|:-----------:|:----------------:|:--------:|:------:|:-----------:|
+|   m5.12xlarge  |      20     |       4.1TB      | 4min 30 s | $3.456 |    0.0293  |
+|   m5.4xlarge  |      30     |       4.1TB      | 6min 12 s | $2.381 |    0.0834  |
+|   m5.4xlarge  |      20     |       4.1TB      | 7min 6s | $1.818 |  **0.1443** |
+|   m5.4xlarge  |      15     |       4.1TB      | 9min 31s | $1.843 |  0.1352  |
+|   m5.4xlarge  |      10     |       4.1TB      | 13min 20s| $1.702 |   **0.1459** | 
+|   m5.4xlarge  |      5      |       4.1TB      | 25min 43s| $1.6448 |  0.1258  |
+|   m5.2xlarge  |      20     |       4.1TB      | 7min 6s | $1.856 |  0.1227   |
+
 
 In the end the best configuration, based on our metric, turned out to be 20 *c4.4xlarge* machines for the *c4* family and xxx for the *m5* family. We decided to select those configurations and try to improve their performance by tuning Spark options.
 
@@ -93,30 +107,30 @@ Having our best cluster setups, we decided to try to tune spark and yarn options
 
 1.  EMR default configuration
 
-    As it turns out, AWS EMR sets up spark options with some predefined values based on type of machine, that we have used in our cluster. 
+    As it turns out, AWS EMR sets up spark options with some predefined values based on the type of machine, that we're using in our cluster. 
     
     ![figure 9](./img/spark_defaults.png)
     
-    For the *c4* machines family, which is supposed to be compute optimized, it apparently determines the number of executors in a way that each will have 4 vCores assigned.
+    For the *c4* machines family, which is supposed to be compute optimized, it determines the number of executors in a way that each will have 4 vCores assigned.
 
     ![figure 10](./img/default_executors.png)
 
     So for *c4.8xlarge*, *c4.4xlarge*, *c4.2xlarge* it creates 9, 4, 2 executors per machine respectively.
 
-    For the *m5* family which serve as *general purpose*, it opts to always have 2vCores assigned to each executor. 
+    For the *r5* family, which is supposed to be memory optimized, it creates 1 exectuore per vCore. The obvious downside of this approaach is that it’ll not be able to take advantage of running multiple tasks in the same JVM. Maybe that's the reason it didn't perform that well for us.
 
-    For the *r5* family, which is supposed to be memory optimized for instance it creates 1 exectuore per vCore and so it’ll not be able to take advantage of running multiple tasks in the same JVM. Maybe that is the reason it did not perform that well for us.
- 
+    For the *m5* family which serve as *general purpose*, it opts to always have 2vCores assigned to each executor. We can see that it's somewhat balanced between memory and compute oriented machines.
+
 
     All the results to this point, were obtained using the deafult EMR configuration.
 
 2. Enabling maximum resource allocation option
 
-    [https://docs.aws.amazon.com/emr/latest/ReleaseGuide/emr-spark-configure.html#spark-defaults] gives a hint that it is possible for spark to set option *maximizeResourceAllocation* to *true*. This option will set some spark options based on this table :
+    [1] gives a hint that it is possible for spark to set option *maximizeResourceAllocation* to *true*. This option will set some spark options based on this table :
 
     ![figure 11](./img/spark_defaults_maximize.png)
 
-    Passing this configuration:
+    We first, tried this out with 20 *c4.x4large* machines. Passing this configuration:
     ```json
     [
         {
@@ -127,11 +141,11 @@ Having our best cluster setups, we decided to try to tune spark and yarn options
         }
     ] 
     ```
-    to our spark application, yielded some strange result at first. Spark during runtime created 38 executors, where each had maximum number of vCores assigned and half of them processed all the data and other half did just small amount of tasks as can be seen in the picture below:
+    to our spark application, yielded some strange result at first. Spark during runtime created 38 executors, where each had maximum number of vCores (16) assigned and half of them processed all the data and other half did just small amount of tasks as can be seen in the picture below:
 
     ![figure 12](./img/executors_with_maximum_resource_and_dynamic.png)
 
-    This behaviour was caused by the *spark.dynamicAllocation* option enabled. As the documentation states [], *spark.dynamicAllocation option* is set to *true* by default. In this case, at some point Spark decided to kill all the executors and create new ones for some reason.
+    This behaviour was caused by the *spark.dynamicAllocation* option enabled. As the documentation states [1], *spark.dynamicAllocation option* is set to *true* by default. In this case, at some point Spark decided to kill all the executors and create new ones for some reason. With this configuration our application finished after 11 minutes.
 
     
     ![figure 13](./img/max_res.png)
@@ -160,16 +174,15 @@ Having our best cluster setups, we decided to try to tune spark and yarn options
 
     ![figure 15](./img/max_res_no_dyn.png)
 
-    With all 16 cores per executor, apart from ApplicationManager and daemon processes are not counted for, HDFS throughput will hurt and it’ll result in excessive garbage results
+    This time it took 9.7 minutes for application to finish but still in both cases it was distincly longer than with the default configuration. 
 
-    For both cases we obtained processing times 11min and 9.7min respectively which is distincly longer than with the default configuration. 
-
+    Next, we tried passing the second configuration to 20 *m5.x4large* cluster 
 
     //the same for m5 
 
 3.  Setting our own spark options
 
-    We tried to follow the aws guide for maximizing spark performance [https://aws.amazon.com/blogs/big-data/best-practices-for-successfully-managing-memory-for-apache-spark-applications-on-amazon-emr/?fbclid=IwAR0FktESsXL5iFsnhwpqvXYfp7Dgj42mdT3aEqGfANTJsqPQXBDoB3so_Lk]. For our 20 nodes *c4.4xlarge* cluster we calculated the following properties:
+    We tried to follow the aws guide for maximizing spark performance [2]. For our 20 nodes *c4.4xlarge* cluster we calculated the following properties:
 
         spark.executor.cores = 5 (5 vcores per executor)
         spark.executor.instances = (3*20) - 1 = 59 (total number of executors)
@@ -198,23 +211,49 @@ Having our best cluster setups, we decided to try to tune spark and yarn options
     ] 
     ```
 
-    Unfortunately, for some reason spark cannot create 3 executors with 5 vCores (which is quite strange, because by default Spark created 4 exectuors with 4 vCores each), so it only create 2 executors per machine which results in underperformance. We can see that instead of 59, only 40 executors were created.
+    Unfortunately, for some reason spark can't create 3 executors with 5 vCores (which is quite strange, because by default Spark created 4 exectuors with 4 vCores each), so it only creates 2 executors per machine  with 5 vCores each, which results in underperformance. We can see that instead of 59, only 40 executors were created.
 
     ![figure 16](./img/executors_config1.png)
 
     ![figure 17](./img/executors_config2.png)
 
-    We tried many different configuration setups on many different clusters and still we were always ending up with worse than the default performance. 
 
-    //the same for m5
+    Similarly for the *m5.x4large* we tried this configuration:
+    
+    ```json
+    [
+        {
+            "Classification": "spark-defaults",
+            "Properties": {
+                "spark.dynamicAllocation.enabled": "false",
+                "spark.executor.cores": "5",
+                "spark.executor.instances": "59",
+                "spark.executors.memory": "18G",
+                "spark.yarn.executor.memoryOverhead": "3G",
+                "spark.driver.memory": "18G",
+                "spark.default.parallelism": "590",
+                "spark.default.parallelism": "590", 
+            }
+        }
+    ] 
+    ```
+    but the result was the same.
 
-4.  Maybe try repartitioning
+    ![figure 14](./img/20m5.x4large_Full_config.png)
+   
 
-    Quite hopeless, since our application is pretty straightforward. 
+    Later on, we tried many different configuration setups, by adding and removing some options here and there, on many different clusters and still we weren't able to increase the performance. 
 
 
-# Conclusions
-In this lab we were required to process the entire GDELT Dataset (~4.1TB) in under 30 minutes and spending less than $12. With the settings that were required by the lab manual, our implementation is able to complete the job in about 5 minutes, spending just $2.6. Furthermore, we defined a metric based on time and money spent, that helped us in the investigation of which cluster configuration was the best. This led us to run some tests on different clusters with various types of machines, after a thorough study of the performances report obtained from Ganglia. In this sense, we managed to improve both time and money-wise the performances with a different machine with respect to the one advised in the manual, namely the *m5.4xlarge*.
+# Summary
 
-Beside this study, we tried to dive in the optimization techniques of Spark. Since the application we developed is quite straightforward (e.g. no caching or broadcast variables have been used) and we are using DataSets which give us tons of optimization for free, it is quite hard to improve its performance. We believe optimization is a topic that requires much more time and deeper study with respect to basic knowledge as we have acquired so far. However, the default configuration that AWS sets up turns out to be quite effective, thus we have been able of satisfying the requirements with no modifications to our original code. 
+In the end we didn't succeed in tuning our spark application. Since our application is quite straightforward (it doesn't use for instance: caching or broadcast variables)and we are using DataSets which give us tons of optimization for free, it is quite hard to improve it's performance, especially for people new o spark, regarding that the default configuration that AWS sets up, turns out to be quite effective. 
+
+To improve the performance, it'd require to dive really deep into spark optimization techinques which was not feasible based on time and money limit. The fact that few days before the deadline, during the day, there were problems with provisioning spot machines.
+
+
+# Resources 
+
+[1] https://docs.aws.amazon.com/emr/latest/ReleaseGuide/emr-spark-configure.html#spark-defaults
+[2] https://aws.amazon.com/blogs/big-data/best-practices-for-successfully-managing-memory-for-apache-spark-applications-on-amazon-emr/?fbclid=IwAR0FktESsXL5iFsnhwpqvXYfp7Dgj42mdT3aEqGfANTJsqPQXBDoB3so_Lk
     
