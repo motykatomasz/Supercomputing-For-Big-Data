@@ -24,7 +24,7 @@ In general, this is a good metric to compare different cluster settings that are
 # Test with other instances
 Instead of trying already with the cluster made of 20 _c4.8xlarge_ instances, we decided to approach the problem gradually, by trying to scale up and scale out the problem. We made different calculations on 3k, 10k and 30k segments with clusters with different composition. The result are reported in the figure below.
 ![figure 2](./img/bar-graph.png)
-*Figure 1. Metric behaviour for different clusters.*
+**Figure 1.** *Metric behaviour for different clusters.*
 
 As it is possible to notice, according to our metric, clusters with very high memory and network bandwidth are not suited for processing small batches of data. This may be due to the higher cost they have, since the time we save by using this more powerful cluster is not enough to balance the other term in the equation. The situation is the opposite in case of clusters made of powerful machines that process larger batches. There, the potentialities of the clusters, show their's value and our metric confirm this behavior.
 
@@ -55,10 +55,11 @@ At first, we had problems in running the entire dataset because of memory errors
 Our implementation completes the job in 5 minutes ad 5 seconds, for a total expenditure of $2.695; both metrics are far below the requirements reported in the lab manual, respectively below 30 minutes and $12. These results yield a metric of 0.0620. However, we decided to analyze the cluster performances to check the presence of eventual bottlenecks. Below are reported the visualizations obtained through Ganglia.
 
 ![figure 3](./img/overviewc48x.png)
+
 **Figure 2.** *Usage of resources for 20 c4.x8large machines.*
 
 
-As it is possible to notice from the figures, no particual bottleneck that is slowing down eccessively the cluster exists (i.e., no clear peak or abnormal behavior appears in the graphs). However, we can clearly see that the the cpu (~55%) and memory usage can still be higher. As the memory is probably bounded by some spark configuration (Spark application filters most of the data at start so we don't really need high memory limit), the CPU seems like it's waiting for I/O. Tjerefore, we decided to look for other machine type that has better bandwidth/vCores ratio.
+As it is possible to notice from the figures, no particual bottleneck that is slowing down eccessively the cluster exists (i.e., no clear peak or abnormal behavior appears in the graphs). However, we can clearly see that the the cpu (~55%) and memory usage can still be higher. As the memory is probably bounded by some spark configuration (Spark application filters most of the data at start so we don't really need high memory limit), the CPU seems like it's waiting for I/O. Therefore, we decided to look for other machine type that has better bandwidth/vCores ratio.
 
 # Further experiments
 First, we opted to try others from c4 family as they are easier to compare with *c4.8xlarge* and they are compute optimized, which we thought is more suitable for application. 
@@ -83,7 +84,7 @@ In the table below we present outcome of series of measurments for th *c4* famil
 |   c4.2xlarge  |      15     |       4.1TB      | 24min 3s| $2.388 |    0.0615 | 
 |   c4.2xlarge  |      10     |       4.1TB      | 37min | $2.454 |    0.0464 | 
 
-As, it turned out *c4.4xlarge* and *c4.2xlarge* has the same bandwidth/vCores ratio as *c4.8xlarge* (which was not obvious, since AWS labeled bandwidth available on the interface as *high*), so the characteristic we obtained in Ganglia were quite similar. Only in the case of running 20 *c4.4xlarge* machines,we obtained slightly higher CPU usage (~62%), which resulted in higher value of our metric.
+As, it turned out *c4.4xlarge* and *c4.2xlarge* has the same bandwidth/vCores ratio as *c4.8xlarge* (which was not obvious, since AWS labeled bandwidth available on the interface as *High*), so the characteristic we obtained in Ganglia were quite similar. Only in the case of running 20 *c4.4xlarge* machines,we obtained slightly higher CPU usage (~62%), which resulted in higher value of our metric.
 
 ![figure 5](./img/20c4.x4large_Full.png)
 **Figure 4.** *Usage of resources for 20 c4.x4large machines.*
